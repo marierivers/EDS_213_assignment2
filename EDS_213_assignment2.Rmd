@@ -1,0 +1,114 @@
+---
+title: "EDS 213 Assignment 2"
+author: "Marie Rivers"
+date: "10/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE}
+library(tidyverse)
+library(dataRetrieval)
+library(metajam)
+library(here)
+```
+# 2.1 - dataRetrieval
+
+```{r}
+# method to query multiple sites
+siteNumbers <- c("11118500", "11113500") # VENTURA R NR VENTURA and SANTA PAULA C NR SANTA PAULA
+siteINFO <- readNWISsite(siteNumbers)
+parameterCd <- "00060" # discharge
+startDate <- "2020-10-01"
+endDate <- "2021-10-10"
+startDate_oct4 <- "2021-10-04"
+endDate_oct4 <- "2021-10-04"
+
+discharge <- readNWISdv(siteNumbers, parameterCd, startDate, endDate)
+oct4_discharge <- readNWISuv(siteNumbers, parameterCd, startDate_oct4, endDate_oct4)
+```
+
+
+```{r}
+# daily streamflow for the past year
+daily_riv_plot <- ggplot(data = discharge, aes(x = Date, y = X_00060_00003)) +
+  geom_line(aes(color = site_no)) +
+  labs(y = "Daily Discharge (ft cubic feet per second)", x = "Date",
+       title = "Daily Streamflow",
+       subtitle = "USGS 11118500 Ventura River near Ventura and USGS 11113500 Santa Paula Creek near Santa Paula") +
+  theme(plot.subtitle = element_text(size = 10))
+daily_riv_plot
+```
+```{r}
+# 15 minute streamflow for the beginning of October 2020
+oct4_riv_plot <- ggplot(data = oct4_discharge, aes(x = dateTime, y = X_00060_00000)) +
+  geom_line(aes(color = site_no)) +
+  labs(y = "Discharge (ft cubic feet per second)", x = "Date",
+       title = "15 Minute Streamflow Readings",
+       subtitle = "USGS 11118500 Ventura River near Ventura and USGS 11113500 Santa Paula Creek near Santa Paula") +
+  theme(plot.subtitle = element_text(size = 10))
+oct4_riv_plot
+```
+
+# 2.1 - metajam
+
+```{r eval = FALSE}
+# url to csv file
+data_url <- "https://knb.ecoinformatics.org/knb/d1/mn/v2/object/urn%3Auuid%3A7fc6f6db-c5ea-426a-a743-1f2edafb43b8"
+
+# download the data and metadata to project folder
+data_path <- metajam::download_d1_data(data_url, "~/Documents/UCSB_Environmental_Data_Science/EDS_213_Metadata_Standards_Data_Modeling_and_Data_Semantics/EDS_213_assignment2/data")
+```
+
+```{r eval = FALSE}
+# Read the data and metadata
+hh_list <- metajam::read_d1_files(data_path)
+
+# get the data frame about household
+hh_data <- hh_list$data
+
+# get the attribute (columns) metadata
+hh_att_metadata <- hh_list$attribute_metadata
+```
+## Compute the percentage of Alaskan households speaking only English for the year 2009 to 2015
+
+```{r message=FALSE}
+household_language <- read_csv(here("data", "doi_10.5063_F1CJ8BPH__household_language__csv", "household_language.csv"))
+
+hh_data_english <- household_language %>%
+  filter(Year >= 2009) %>%
+  filter(speak_only_english > 0) %>%
+  mutate(percent_only_english = (speak_only_english / total) * 100) %>%
+  relocate(percent_only_english, .before = german) %>%
+  mutate(SASAP.Region = fct_reorder(SASAP.Region, percent_only_english, .fun = mean)) %>%
+  group_by(SASAP.Region, Year) %>%
+  summarise(avg_percent_english = mean(percent_only_english))
+```
+
+## Create a plot to visualize this data
+
+```{r warning=FALSE}
+only_english_plot <- ggplot(hh_data_english, aes(x = Year, y = SASAP.Region)) +
+  geom_tile(aes(fill = avg_percent_english), show.legend = TRUE) +
+  geom_text(aes(label = paste0(round(avg_percent_english, 0),"%")), color = "white", size = 3) +
+  scale_fill_gradientn(colors = c("antiquewhite3", "antiquewhite4", "steelblue4", "springgreen4", "indianred4")) +
+  theme_minimal() +
+  labs(x = "Year", y = NULL,
+       fill = "Percent",
+       title = "Percent of Alaska Households that Only Speak English",
+       subtitle = "based on State of Alaska Salmon and People Region",
+       caption = "source: Jeanette Clark, Sharis Ochs, Derek Strong, and National Historic Geographic Information System. 2018.\nLanguages used in Alaskan households, 1990-2015. urn:node:KNB. doi:10.5063/F1N58JPP") +
+  theme(plot.caption = element_text(size = 8, hjust = 0),
+        plot.caption.position = "plot") +
+  theme(plot.title.position = "plot") +
+  scale_x_discrete(name = "Year", limits = c(2009, 2010, 2011, 2012, 2013, 2014, 2015))
+
+only_english_plot
+```
+
+The figure above shows a general trend in each region where the percent of household that only speak English increased from 2009 to 2015. In the Copper River, Prince William Sound, Chignik, Kotzebue regions, the percent of only English speaking households decreased slightly over the selected time range. In the Southeast and Bristol Bay regions, the percentage of English speaking households was the same in 2009 and 2015. 
+
+

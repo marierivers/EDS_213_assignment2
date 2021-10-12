@@ -24,8 +24,8 @@ siteINFO <- readNWISsite(siteNumbers)
 parameterCd <- "00060" # discharge
 startDate <- "2020-10-01"
 endDate <- "2021-10-10"
-startDate_oct4 <- "2021-10-04"
-endDate_oct4 <- "2021-10-04"
+startDate_oct4 <- "2021-10-03"
+endDate_oct4 <- "2021-10-05"
 
 discharge <- readNWISdv(siteNumbers, parameterCd, startDate, endDate)
 oct4_discharge <- readNWISuv(siteNumbers, parameterCd, startDate_oct4, endDate_oct4)
@@ -42,6 +42,7 @@ daily_riv_plot <- ggplot(data = discharge, aes(x = Date, y = X_00060_00003)) +
   theme(plot.subtitle = element_text(size = 10))
 daily_riv_plot
 ```
+
 ```{r}
 # 15 minute streamflow for the beginning of October 2020
 oct4_riv_plot <- ggplot(data = oct4_discharge, aes(x = dateTime, y = X_00060_00000)) +
@@ -52,6 +53,7 @@ oct4_riv_plot <- ggplot(data = oct4_discharge, aes(x = dateTime, y = X_00060_000
   theme(plot.subtitle = element_text(size = 10))
 oct4_riv_plot
 ```
+While there appears to be a slight increase in stream discharge at each site on the evening of Oct. 4, this increase is within the normal range of discharge variability during periods without precipitation. Therefore, increased discharge observed during the evening of Oct. 4 or the following day can not be attributed solely to the storm.
 
 # 2.1 - metajam
 
